@@ -18,7 +18,7 @@ from typing import Optional
 TOKEN = os.getenv("DISCORD_TOKEN", "MTUwODE0MDU4NTQyMzMzOTU0MA.GLd_GS.ISTlw5xqX4Sf741Lt82S4TOhp_GkaHPIFY1_Fw")
 
 # Kanal ID'sini doğrudan koda sabitliyoruz ki panelden okuyamadığında çökmesin
-HEDEF_KANAL_ID = 1411089853998698642
+HEDEF_KANAL_ID = 1411100865787596820
 
 # ========================================================================
 # 2. LOGLAMA SİSTEMİ (Profesyonel botlar için zorunludur)
