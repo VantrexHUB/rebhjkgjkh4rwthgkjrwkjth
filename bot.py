@@ -12,8 +12,9 @@ from typing import Optional
 # 1. AYARLAR VE YAPILANDIRMA
 # ========================================================================
 # Botun çalışması için gerekli temel ayarlar
-TOKEN = "MTUwODE0MDU4NTQyMzMzOTU0MA.GcMJIK.fES6nLPoVg1mjz1YPYj-EDd0riK-mnT1agR4Ws"
-HEDEF_KANAL_ID = 1411089853998698642
+# Railway Variables kısmından güvenli şekilde bilgileri çekiyoruz
+TOKEN = os.getenv("DISCORD_TOKEN")
+HEDEF_KANAL_ID = int(os.getenv("HEDEF_KANAL"))
 
 # ========================================================================
 # 2. LOGLAMA SİSTEMİ (Profesyonel botlar için zorunludur)
