@@ -155,7 +155,7 @@ async def send_cmd(interaction: discord.Interaction, channel: discord.TextChanne
 # ---------------------------------------------------------
 # COMMAND 2: /txt (Personal TXT Document Creator - PRESERVES LINES)
 # ---------------------------------------------------------
-@bot.tree.command(name="txt", description="Instantly converts your text into a .txt document and sends it to you. (Line breaks preserved)")
+@bot.tree.command(name="txt", description="Converts text into a .txt document and sends it to you. (Line breaks preserved)")
 @app_commands.describe(
     file_name="The name of the file to be created (e.g., notes)",
     content="The full text to be written inside the txt file",
@@ -193,7 +193,7 @@ async def txt_cmd(interaction: discord.Interaction, file_name: str, content: str
 # ---------------------------------------------------------
 # COMMAND 3: /sendtxt (Dynamic Channel TXT Sender - PRESERVES LINES)
 # ---------------------------------------------------------
-@bot.tree.command(name="sendtxt", description="Converts the text into a .txt document and sends it directly to the target channel. (Line breaks preserved)")
+@bot.tree.command(name="sendtxt", description="Converts text into a .txt document and sends it to the target channel. (Lines preserved)")
 @app_commands.describe(
     channel="The target channel where the file will be sent",
     file_name="The name of the file to be created",
@@ -251,7 +251,7 @@ async def sendtxt_cmd(interaction: discord.Interaction, channel: discord.TextCha
 # ---------------------------------------------------------
 # COMMAND 4: /modifytxt (Dynamic Channel TXT Sender - FLATTENS LINES TO SINGLE LINE)
 # ---------------------------------------------------------
-@bot.tree.command(name="modifytxt", description="Converts the text into a .txt document by flattening all lines side by side, then sends to the channel.")
+@bot.tree.command(name="modifytxt", description="Flattens all lines side by side in a .txt file and sends it to the channel.")
 @app_commands.describe(
     channel="The target channel where the file will be sent",
     file_name="The name of the file to be created",
