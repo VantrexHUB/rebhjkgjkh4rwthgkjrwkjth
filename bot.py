@@ -9,34 +9,29 @@ import asyncio
 from typing import Optional
 
 # ========================================================================
-# 1. AYARLAR VE YAPILANDIRMA (Railway Uyumlu)
+# 1. SETTINGS AND CONFIGURATION (Railway Compatible)
 # ========================================================================
-# Bot tokenini Railway Variables (Çevre Değişkenleri) üzerinden çeker.
+# Fetches the bot token from Railway Environment Variables
 TOKEN = os.getenv("DISCORD_TOKEN")
 
-# Kanal ID'si yeni verdiğin ID olarak koda gömüldü. 
-# Eğer Railway'e HEDEF_KANAL değişkeni eklersen oradan okur, eklemezsen bu sabit ID'yi kullanır.
-HEDEF_KANAL_ENV = os.getenv("HEDEF_KANAL")
-HEDEF_KANAL_ID = int(HEDEF_KANAL_ENV) if HEDEF_KANAL_ENV else 1411100865787596820
-
 # ========================================================================
-# 2. LOGLAMA SİSTEMİ (Gelişmiş Takip)
+# 2. LOGGING SYSTEM
 # ========================================================================
 logger = logging.getLogger('discord')
 logger.setLevel(logging.INFO)
 
-# Hataları ve logları dosyaya kaydetmek için handler
+# Handler to save errors and logs into a file
 handler = logging.FileHandler(filename='discord_bot.log', encoding='utf-8', mode='w')
 handler.setFormatter(logging.Formatter('%(asctime)s:%(levelname)s:%(name)s: %(message)s'))
 logger.addHandler(handler)
 
-# Aynı logları Railway konsolunda (Deploy Logs) anlık görebilmek için console handler
+# Console handler to view logs instantly on Railway Dashboard
 console_handler = logging.StreamHandler()
 console_handler.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(message)s'))
 logger.addHandler(console_handler)
 
 # ========================================================================
-# 3. BOT SINIFI VE BAĞLANTI ALT YAPISI
+# 3. BOT CLASS AND CONNECTION INFRASTRUCTURE
 # ========================================================================
 class ProDiscordBot(commands.Bot):
     def __init__(self):
@@ -51,249 +46,233 @@ class ProDiscordBot(commands.Bot):
         )
 
     async def setup_hook(self):
-        logger.info("Slash komutları senkronize ediliyor...")
+        logger.info("Synchronizing slash commands...")
         try:
             await self.tree.sync()
-            logger.info("Komutlar başarıyla senkronize edildi.")
+            logger.info("Commands synchronized successfully.")
         except Exception as e:
-            logger.error(f"Komut senkronizasyonu sırasında kritik hata: {e}")
+            logger.error(f"Critical error during command synchronization: {e}")
 
     async def on_ready(self):
-        logger.info(f"Bot Başarıyla Giriş Yaptı! Kullanıcı: {self.user} (ID: {self.user.id})")
-        logger.info(f"Aktif Hedef Kanal ID: {HEDEF_KANAL_ID}")
+        logger.info(f"Bot successfully logged in! User: {self.user} (ID: {self.user.id})")
         logger.info("-" * 40)
         
-        activity = discord.Activity(type=discord.ActivityType.watching, name="Sunucuyu ve Komutları")
+        activity = discord.Activity(type=discord.ActivityType.watching, name="the Server and Commands")
         await self.change_presence(status=discord.Status.online, activity=activity)
 
 bot = ProDiscordBot()
 
 # ========================================================================
-# 4. YARDIMCI FONKSİYONLAR (Gelişmiş Arayüz Tasarımları)
+# 4. HELPER FUNCTIONS (Interface Designs)
 # ========================================================================
 def create_embed(title: str, description: str, color: discord.Color = discord.Color.blue()) -> discord.Embed:
-    """Sistem genelinde şık ve standart embed mesajları üretir."""
+    """Generates stylish and standard embed messages across the system."""
     embed = discord.Embed(title=title, description=description, color=color, timestamp=discord.utils.utcnow())
-    embed.set_footer(text="Sleeping Bot Altyapısı", icon_url=bot.user.display_avatar.url if bot.user and bot.user.display_avatar else None)
+    embed.set_footer(text="Sleeping Bot Infrastructure", icon_url=bot.user.display_avatar.url if bot.user and bot.user.display_avatar else None)
     return embed
 
 # ========================================================================
-# 5. KÜRESEL HATA YAKALAYICI (Global Error Handler)
+# 5. GLOBAL ERROR HANDLER
 # ========================================================================
 @bot.tree.error
 async def on_app_command_error(interaction: discord.Interaction, error: app_commands.AppCommandError):
-    """Komutlar çalışırken oluşabilecek tüm çökmeleri engeller ve kullanıcıyı bilgilendirir."""
+    """Prevents crashes during command executions and informs the user."""
     if isinstance(error, app_commands.CommandOnCooldown):
-        await interaction.response.send_message(f"⏳ Lütfen yavaşla! Bu komutu tekrar kullanmak için {error.retry_after:.2f} saniye bekle.", ephemeral=True)
+        await interaction.response.send_message(f"⏳ Please slow down! Wait {error.retry_after:.2f} seconds to use this command again.", ephemeral=True)
     elif isinstance(error, app_commands.MissingPermissions):
-        await interaction.response.send_message("❌ Bu komutu kullanmak için gerekli yetkilere sahip değilsin.", ephemeral=True)
+        await interaction.response.send_message("❌ You do not have the required permissions to use this command.", ephemeral=True)
     else:
-        logger.error(f"Komut tetiklenirken beklenmeyen hata oluştu: {error}")
+        logger.error(f"An unexpected error occurred while triggering the command: {error}")
         try:
             if not interaction.response.is_done():
-                await interaction.response.send_message("❌ Komut işlenirken beklenmeyen bir ağ hatası oluştu.", ephemeral=True)
+                await interaction.response.send_message("❌ An unexpected network error occurred while processing the command.", ephemeral=True)
             else:
-                await interaction.followup.send("❌ İşlem sırasında bir hata meydana geldi.", ephemeral=True)
+                await interaction.followup.send("❌ An error occurred during the process.", ephemeral=True)
         except Exception:
             pass
 
 # ========================================================================
-# 6. TÜM AKTİF SLASH KOMUTLARI
+# 6. ALL ACTIVE SLASH COMMANDS
 # ========================================================================
 
 # ---------------------------------------------------------
-# KOMUT 1: /send (Mesaj Gönderme)
+# COMMAND 1: /send (Dynamic Channel Message Sender)
 # ---------------------------------------------------------
-@bot.tree.command(name="send", description="Belirlediğiniz hedef kanala istediğiniz metni gönderir.")
+@bot.tree.command(name="send", description="Sends the desired text to the specified target channel.")
 @app_commands.describe(
-    mesaj="Göndermek istediğiniz yazı",
-    gondereni_goster="Mesajın altında adınızın görünmesini istiyor musunuz?"
+    channel="The target channel where the message will be sent",
+    message="The text you want to send",
+    show_sender="Do you want your name to appear at the bottom of the message?"
 )
-@app_commands.choices(gondereni_goster=[
-    app_commands.Choice(name="Evet, göster", value="evet"),
-    app_commands.Choice(name="Hayır, gizli kalsın", value="hayir")
+@app_commands.choices(show_sender=[
+    app_commands.Choice(name="Yes, show", value="yes"),
+    app_commands.Choice(name="No, keep hidden", value="no")
 ])
-async def send_cmd(interaction: discord.Interaction, mesaj: str, gondereni_goster: str = "hayir"):
-    # 3 saniye zaman aşımını engellemek için düşünme süresi başlatıyoruz
+async def send_cmd(interaction: discord.Interaction, channel: discord.TextChannel, message: str, show_sender: str = "no"):
+    # Triggers defer to prevent 3-second timeout limits
     await interaction.response.defer(ephemeral=True)
     
-    # Cache (get_channel) ve API (fetch_channel) protokolünü bir arada kullanarak kanalı kesin olarak arıyoruz
-    kanal = None
-    try:
-        kanal = bot.get_channel(HEDEF_KANAL_ID)
-        if not kanal:
-            kanal = await bot.fetch_channel(HEDEF_KANAL_ID)
-    except Exception as e:
-        logger.error(f"Kanal çekilirken hata oluştu: {e}")
-
-    if not kanal:
+    if not channel:
         hata_embed = create_embed(
-            title="❌ Kanal Bulunamadı", 
-            description=f"Hedeflenen `{HEDEF_KANAL_ID}` ID'li kanal bulunamadı veya botun bu kanalı görme yetkisi yok.", 
+            title="❌ Channel Not Found", 
+            description="The specified channel could not be found or the bot does not have permission to view it.", 
             color=discord.Color.red()
         )
         await interaction.followup.send(embed=hata_embed)
         return
 
-    # Gönderen bilgisini biçimlendirme
-    if gondereni_goster == "evet":
-        gonderilecek_icerik = f"{mesaj}\n\n*👤 Gönderen: {interaction.user.mention}*"
+    # Formatting the sender info based on choice
+    if show_sender == "yes":
+        gonderilecek_icerik = f"{message}\n\n*👤 Sender: {interaction.user.mention}*"
     else:
-        gonderilecek_icerik = mesaj
+        gonderilecek_icerik = message
 
     try:
-        await kanal.send(content=gonderilecek_icerik)
-        basari_embed = create_embed("✅ Başarılı", f"Mesajınız başarıyla <#{HEDEF_KANAL_ID}> kanalına iletildi.", discord.Color.green())
+        await channel.send(content=gonderilecek_icerik)
+        basari_embed = create_embed("✅ Success", f"Your message has been successfully delivered to {channel.mention}.", discord.Color.green())
         await interaction.followup.send(embed=basari_embed)
-        logger.info(f"[SEND] {interaction.user} kullanıcısı hedef kanala mesaj gönderdi.")
+        logger.info(f"[SEND] User {interaction.user} sent a message to channel {channel.id}.")
     except discord.Forbidden:
-        await interaction.followup.send("❌ Botun hedef kanala mesaj gönderme yetkisi (Mesaj Gönder izni) bulunmuyor!")
+        await interaction.followup.send("❌ The bot does not have permission to send messages to the target channel!")
     except Exception as e:
-        await interaction.followup.send(f"❌ Mesaj gönderilirken teknik bir hata oluştu: {e}")
+        await interaction.followup.send(f"❌ A technical error occurred while sending the message: {e}")
 
 # ---------------------------------------------------------
-# KOMUT 2: /txt (Kişisel TXT Oluşturucu)
+# COMMAND 2: /txt (Personal TXT Document Creator)
 # ---------------------------------------------------------
-@bot.tree.command(name="txt", description="Yazdığınız metni anında bir .txt belgesine çevirip size gönderir.")
+@bot.tree.command(name="txt", description="Instantly converts your text into a .txt document and sends it to you.")
 @app_commands.describe(
-    dosya_adi="Oluşturulacak dosyanın adı (Örn: notlarim)",
-    icerik="Txt dosyasının içerisine yazılacak tam metin"
+    file_name="The name of the file to be created (e.g., notes)",
+    content="The full text to be written inside the txt file"
 )
-async def txt_cmd(interaction: discord.Interaction, dosya_adi: str, icerik: str):
+async def txt_cmd(interaction: discord.Interaction, file_name: str, content: str):
     await interaction.response.defer(ephemeral=True)
     
-    # Dosya ismi optimizasyonu
-    dosya_adi = dosya_adi.replace(" ", "_")
-    if not dosya_adi.endswith(".txt"):
-        dosya_adi += ".txt"
+    # File name optimization
+    file_name = file_name.replace(" ", "_")
+    if not file_name.endswith(".txt"):
+        file_name += ".txt"
         
-    # Bellek üzerinden geçici sanal dosya oluşturma
-    dosya_byte = io.BytesIO(icerik.encode("utf-8"))
-    discord_dosyasi = discord.File(fp=dosya_byte, filename=dosya_adi)
+    # Creating a virtual file directly over RAM memory
+    dosya_byte = io.BytesIO(content.encode("utf-8"))
+    discord_dosyasi = discord.File(fp=dosya_byte, filename=file_name)
     
     embed = create_embed(
-        title="📄 Belgeniz Hazır",
-        description=f"İstediğiniz **{dosya_adi}** dosyası başarıyla oluşturuldu ve aşağıya eklendi.",
+        title="📄 Your Document is Ready",
+        description=f"The requested **{file_name}** file has been successfully created and attached below.",
         color=discord.Color.gold()
     )
     embed.set_author(name=interaction.user.display_name, icon_url=interaction.user.display_avatar.url if interaction.user.display_avatar else None)
 
     try:
         await interaction.followup.send(embed=embed, file=discord_dosyasi)
-        logger.info(f"[TXT] {interaction.user} kullanıcısı {dosya_adi} dosyasını başarıyla üretti.")
+        logger.info(f"[TXT] User {interaction.user} successfully generated the file {file_name}.")
     except Exception as e:
-        await interaction.followup.send(f"❌ Dosya iletilirken hata meydana geldi: {e}")
+        await interaction.followup.send(f"❌ An error occurred while delivering the file: {e}")
     finally:
         dosya_byte.close()
 
 # ---------------------------------------------------------
-# KOMUT 3: /sendtxt (Hedef Kanala TXT Gönderme)
+# COMMAND 3: /sendtxt (Dynamic Channel TXT Sender)
 # ---------------------------------------------------------
-@bot.tree.command(name="sendtxt", description="Metni .txt belgesi yapıp direkt olarak hedef kanala gönderir.")
+@bot.tree.command(name="sendtxt", description="Converts the text into a .txt document and sends it directly to the target channel.")
 @app_commands.describe(
-    dosya_adi="Oluşturulacak dosyanın adı",
-    icerik="Dosyanın içerisine yazılacak metin",
-    gondereni_goster="Mesajın altında adınızın görünmesini istiyor musunuz?"
+    channel="The target channel where the file will be sent",
+    file_name="The name of the file to be created",
+    content="The text to be written inside the file",
+    show_sender="Do you want your name to appear at the bottom of the message?"
 )
-@app_commands.choices(gondereni_goster=[
-    app_commands.Choice(name="Evet, göster", value="evet"),
-    app_commands.Choice(name="Hayır, gizli kalsın", value="hayir")
+@app_commands.choices(show_sender=[
+    app_commands.Choice(name="Yes, show", value="yes"),
+    app_commands.Choice(name="No, keep hidden", value="no")
 ])
-async def sendtxt_cmd(interaction: discord.Interaction, dosya_adi: str, icerik: str, gondereni_goster: str = "hayir"):
+async def sendtxt_cmd(interaction: discord.Interaction, channel: discord.TextChannel, file_name: str, content: str, show_sender: str = "no"):
     await interaction.response.defer(ephemeral=True)
     
-    kanal = None
-    try:
-        kanal = bot.get_channel(HEDEF_KANAL_ID)
-        if not kanal:
-            kanal = await bot.fetch_channel(HEDEF_KANAL_ID)
-    except Exception as e:
-        logger.error(f"Sendtxt komutunda kanal bulunamadı: {e}")
-
-    if not kanal:
-        await interaction.followup.send("❌ Hedef kanal bulunamadı! Lütfen yetkileri ve kanal ID'sini kontrol edin.")
+    if not channel:
+        await interaction.followup.send("❌ Target channel not found! Please check the permissions.")
         return
 
-    dosya_adi = dosya_adi.replace(" ", "_")
-    if not dosya_adi.endswith(".txt"):
-        dosya_adi += ".txt"
+    file_name = file_name.replace(" ", "_")
+    if not file_name.endswith(".txt"):
+        file_name += ".txt"
 
     kanal_embed = discord.Embed(
-        title="📁 Yeni Bir Belge Yüklendi",
+        title="📁 A New Document Has Been Uploaded",
         color=discord.Color.dark_theme(),
         timestamp=discord.utils.utcnow()
     )
     
-    if gondereni_goster == "evet":
-        kanal_embed.add_field(name="Yükleyen Kullanıcı", value=interaction.user.mention, inline=False)
+    if show_sender == "yes":
+        kanal_embed.add_field(name="Sender", value=interaction.user.mention, inline=False)
     
-    kanal_embed.add_field(name="Dosya İsmi", value=f"`{dosya_adi}`", inline=False)
-    kanal_embed.set_footer(text="Otomatik Dosya Gönderim Sistemi")
+    kanal_embed.add_field(name="File Name", value=f"`{file_name}`", inline=False)
+    kanal_embed.set_footer(text="Automatic File Delivery System")
 
-    dosya_byte = io.BytesIO(icerik.encode("utf-8"))
-    discord_dosyasi = discord.File(fp=dosya_byte, filename=dosya_adi)
+    dosya_byte = io.BytesIO(content.encode("utf-8"))
+    discord_dosyasi = discord.File(fp=dosya_byte, filename=file_name)
 
     try:
-        await kanal.send(embed=kanal_embed, file=discord_dosyasi)
-        await interaction.followup.send(f"✅ **{dosya_adi}** belgesi başarıyla <#{HEDEF_KANAL_ID}> kanalına yüklendi.")
-        logger.info(f"[SENDTXT] {interaction.user} -> {dosya_adi} dosyasını kanala gönderdi.")
+        await channel.send(embed=kanal_embed, file=discord_dosyasi)
+        await interaction.followup.send(f"✅ The document **{file_name}** has been successfully uploaded to {channel.mention}.")
+        logger.info(f"[SENDTXT] {interaction.user} -> sent the file {file_name} to channel {channel.id}.")
     except discord.Forbidden:
-        await interaction.followup.send("❌ Botun bu kanala dosya eki veya embed mesaj gönderme izni kapalı!")
+        await interaction.followup.send("❌ The bot's permission to send file attachments or embed messages to this channel is disabled!")
     except Exception as e:
-        await interaction.followup.send(f"❌ İşlem yürütülürken hata: {e}")
+        await interaction.followup.send(f"❌ Error during execution: {e}")
     finally:
         dosya_byte.close()
 
 # ---------------------------------------------------------
-# KOMUT 4: /paste (Yazı Paneli Formatlayıcı)
+# COMMAND 4: /paste (Text Panel Formatter)
 # ---------------------------------------------------------
-@bot.tree.command(name="paste", description="Uzun metinleri sohbeti kirletmeden temiz bir blok formatına dönüştürür.")
-@app_commands.describe(baslik="Metnin başlığı", icerik="Blok içine alınacak uzun metin")
-async def paste_cmd(interaction: discord.Interaction, baslik: str, icerik: str):
+@bot.tree.command(name="paste", description="Converts long texts into a clean block format without cluttering the chat.")
+@app_commands.describe(title="The title of the text", content="The long text to be wrapped in a block")
+async def paste_cmd(interaction: discord.Interaction, title: str, content: str):
     await interaction.response.defer()
     
-    # Karakter sınırını aşmamak için güvenli kırpma yapısı
-    gosterilecek_icerik = icerik[:3900] + ("\n... [İçerik Sınırı Nedeniyle Devamı Kesildi]" if len(icerik) > 3900 else "")
+    # Safe trimming structure to prevent character limit overloads
+    gosterilecek_icerik = content[:3900] + ("\n... [Content Truncated Due to Character Limit]" if len(content) > 3900 else "")
     
     embed = discord.Embed(
-        title=f"📋 {baslik}",
+        title=f"📋 {title}",
         description=f"```text\n{gosterilecek_icerik}\n```",
         color=discord.Color.blue(),
         timestamp=discord.utils.utcnow()
     )
-    embed.set_footer(text=f"Talep Eden: {interaction.user.display_name}")
+    embed.set_footer(text=f"Requested By: {interaction.user.display_name}")
     
     await interaction.followup.send(embed=embed)
 
 # ---------------------------------------------------------
-# KOMUT 5: /botinfo (Sistem Durumu Kontrolü)
+# COMMAND 5: /botinfo (System Status Control)
 # ---------------------------------------------------------
-@bot.tree.command(name="botinfo", description="Botun anlık gecikme süresini ve sunucu istatistiklerini raporlar.")
+@bot.tree.command(name="botinfo", description="Reports the bot's instant latency and server statistics.")
 async def botinfo_cmd(interaction: discord.Interaction):
     gecikme = round(bot.latency * 1000)
     
-    embed = discord.Embed(title="🤖 Bot Anlık Durum Raporu", color=discord.Color.brand_green(), timestamp=discord.utils.utcnow())
-    embed.add_field(name="Gecikme (Ping)", value=f"`{gecikme}ms`", inline=True)
-    embed.add_field(name="Bağlı Sunucu", value=f"`{len(bot.guilds)}` sunucu", inline=True)
-    embed.add_field(name="Hizmet Durumu", value="`Aktif / Sorunsuz`", inline=False)
+    embed = discord.Embed(title="🤖 Bot Instant Status Report", color=discord.Color.brand_green(), timestamp=discord.utils.utcnow())
+    embed.add_field(name="Latency (Ping)", value=f"`{gecikme}ms`", inline=True)
+    embed.add_field(name="Connected Server", value=f"`{len(bot.guilds)}` servers", inline=True)
+    embed.add_field(name="Service Status", value="`Active / Smooth`", inline=False)
     
     if gecikme > 150:
         embed.color = discord.Color.orange()
-    if gecikme > 500:
+    if gecicme > 500:
         embed.color = discord.Color.red()
         
     await interaction.response.send_message(embed=embed)
 
 # ========================================================================
-# 7. SUNUCU ÇALIŞTIRMA TETİKLEYİCİSİ
+# 7. SERVER RUN TRIGGER
 # ========================================================================
 if __name__ == "__main__":
     if not TOKEN:
-        logger.critical("Kritik Hata: DISCORD_TOKEN çevre değişkeni Railway panelinde tanımlı değil!")
+        logger.critical("Critical Error: DISCORD_TOKEN environment variable is not defined in the Railway panel!")
     else:
         try:
             bot.run(TOKEN)
         except discord.LoginFailure:
-            logger.critical("Giriş Başarısız: Railway Variables alanına girilen token geçersiz veya Discord tarafından sıfırlanmış!")
+            logger.critical("Login Failed: The token entered in Railway Variables is invalid or has been reset by Discord!")
         except Exception as e:
-            logger.critical(f"Bot başlatılırken beklenmedik sistem hatası: {e}")
+            logger.critical(f"Unexpected system error while starting the bot: {e}")
