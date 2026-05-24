@@ -13,8 +13,12 @@ from typing import Optional
 # ========================================================================
 # Botun çalışması için gerekli temel ayarlar
 # Railway Variables kısmından güvenli şekilde bilgileri çekiyoruz
-TOKEN = os.getenv("DISCORD_TOKEN")
-HEDEF_KANAL_ID = int(os.getenv("HEDEF_KANAL"))
+
+# Railway Variables kısmından DISCORD_TOKEN'ı çekmeye çalışır, bulamazsa tırnak içindekini dener
+TOKEN = os.getenv("DISCORD_TOKEN", "MTUwODE0MDU4NTQyMzMzOTU0MA.GLd_GS.ISTlw5xqX4Sf741Lt82S4TOhp_GkaHPIFY1_Fw")
+
+# Kanal ID'sini doğrudan koda sabitliyoruz ki panelden okuyamadığında çökmesin
+HEDEF_KANAL_ID = 1411089853998698642
 
 # ========================================================================
 # 2. LOGLAMA SİSTEMİ (Profesyonel botlar için zorunludur)
