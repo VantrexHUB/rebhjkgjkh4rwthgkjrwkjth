@@ -367,17 +367,17 @@ async def sendmytxt_cmd(interaction: discord.Interaction, channel: discord.TextC
 @app_commands.describe(
     channel="The target channel where the uploaded file will be sent",
     file="The file you want to upload from your device",
+    message="An optional text message to accompany the file",
     ping_everyone="Do you want to mention @everyone?"
 )
 @app_commands.choices(ping_everyone=PING_CHOICES)
-async def sendmyfile_cmd(interaction: discord.Interaction, channel: discord.TextChannel, file: discord.Attachment, ping_everyone: str = "no"):
+async def sendmyfile_cmd(interaction: discord.Interaction, channel: discord.TextChannel, file: discord.Attachment, message: Optional[str] = None, ping_everyone: str = "no"):
     await interaction.response.defer(ephemeral=True)
     
     if not channel:
         await interaction.followup.send("❌ Target channel not found!")
         return
 
-    # No file extension restriction here. Accepts any file type.
     try:
         # Read file content safely into memory
         file_bytes = await file.read()
@@ -394,9 +394,14 @@ async def sendmyfile_cmd(interaction: discord.Interaction, channel: discord.Text
             color=discord.Color.teal(),
             timestamp=discord.utils.utcnow()
         )
-        kanal_embed.add_field(name="Sender", value=interaction.user.mention, inline=True)
-        kanal_embed.add_field(name="File Name", value=f"`{file.filename}`", inline=True)
-        kanal_embed.add_field(name="Size", value=f"`{file_size_mb} MB`", inline=True)
+        kanal_embed.add_field(name="👤 Sender", value=interaction.user.mention, inline=True)
+        kanal_embed.add_field(name="📄 File Name", value=f"`{file.filename}`", inline=True)
+        kanal_embed.add_field(name="💾 Size", value=f"`{file_size_mb} MB`", inline=True)
+        
+        # If the user provided an optional message, append it as a clean field
+        if message:
+            kanal_embed.add_field(name="💬 Message", value=message, inline=False)
+            
         kanal_embed.set_footer(text="Universal File Forwarding Engine")
 
         mention_str = "@everyone" if ping_everyone == "yes" else None
