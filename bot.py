@@ -361,7 +361,64 @@ async def sendmytxt_cmd(interaction: discord.Interaction, channel: discord.TextC
         await interaction.followup.send(f"❌ Failed to process and forward the file: {e}")
 
 # ---------------------------------------------------------
-# COMMAND 6: /paste (Text Panel Formatter)
+# COMMAND 6: /sendmyfile (Upload and Forward ANY File to Channel)
+# ---------------------------------------------------------
+@bot.tree.command(name="sendmyfile", description="Uploads any file (e.g., .zip, .exe, .png) and forwards it to the target channel.")
+@app_commands.describe(
+    channel="The target channel where the uploaded file will be sent",
+    file="The file you want to upload from your device",
+    ping_everyone="Do you want to mention @everyone?"
+)
+@app_commands.choices(ping_everyone=PING_CHOICES)
+async def sendmyfile_cmd(interaction: discord.Interaction, channel: discord.TextChannel, file: discord.Attachment, ping_everyone: str = "no"):
+    await interaction.response.defer(ephemeral=True)
+    
+    if not channel:
+        await interaction.followup.send("❌ Target channel not found!")
+        return
+
+    # No file extension restriction here. Accepts any file type.
+    try:
+        # Read file content safely into memory
+        file_bytes = await file.read()
+        
+        # Calculate file size in MB for the embed
+        file_size_mb = round(file.size / (1024 * 1024), 2)
+        
+        # Recreate a fresh Discord file instance
+        dosya_byte = io.BytesIO(file_bytes)
+        discord_dosyasi = discord.File(fp=dosya_byte, filename=file.filename)
+        
+        kanal_embed = discord.Embed(
+            title="📦 A New File Has Arrived",
+            color=discord.Color.teal(),
+            timestamp=discord.utils.utcnow()
+        )
+        kanal_embed.add_field(name="Sender", value=interaction.user.mention, inline=True)
+        kanal_embed.add_field(name="File Name", value=f"`{file.filename}`", inline=True)
+        kanal_embed.add_field(name="Size", value=f"`{file_size_mb} MB`", inline=True)
+        kanal_embed.set_footer(text="Universal File Forwarding Engine")
+
+        mention_str = "@everyone" if ping_everyone == "yes" else None
+
+        await channel.send(content=mention_str, embed=kanal_embed, file=discord_dosyasi)
+        await interaction.followup.send(f"✅ Your file **{file.filename}** has been successfully forwarded to {channel.mention}.")
+        logger.info(f"[SENDMYFILE] {interaction.user} forwarded file {file.filename} to channel {channel.id}.")
+        dosya_byte.close()
+        
+    except discord.Forbidden:
+        await interaction.followup.send("❌ The bot lacks permissions to post embeds or files in the destination channel!")
+    except discord.HTTPException as e:
+        # Code 40005 means "Request entity too large" (usually hits the 25MB standard bot limit)
+        if e.code == 40005:
+            await interaction.followup.send("❌ The file is too large! Discord limits bot file uploads (typically 25MB max).")
+        else:
+            await interaction.followup.send(f"❌ Network or API Error occurred: {e}")
+    except Exception as e:
+        await interaction.followup.send(f"❌ Failed to process and forward the file: {e}")
+
+# ---------------------------------------------------------
+# COMMAND 7: /paste (Text Panel Formatter)
 # ---------------------------------------------------------
 @bot.tree.command(name="paste", description="Converts long texts into a clean block format without cluttering the chat.")
 @app_commands.describe(
@@ -388,7 +445,7 @@ async def paste_cmd(interaction: discord.Interaction, title: str, content: str, 
     await interaction.followup.send(content=mention_str, embed=embed)
 
 # ---------------------------------------------------------
-# COMMAND 7: /botinfo (System Status Control)
+# COMMAND 8: /botinfo (System Status Control)
 # ---------------------------------------------------------
 @bot.tree.command(name="botinfo", description="Reports the bot's instant latency and server statistics.")
 async def botinfo_cmd(interaction: discord.Interaction):
