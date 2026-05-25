@@ -6,7 +6,7 @@ import os
 import logging
 import datetime
 import asyncio
-import requests  # Pastebin API istekleri için eklendi
+import requests  
 from typing import Optional
 
 # ========================================================================
@@ -23,12 +23,10 @@ PASTEBIN_URL = "https://pastebin.com/api/api_post.php"
 logger = logging.getLogger('discord')
 logger.setLevel(logging.INFO)
 
-# Handler to save errors and logs into a file
 handler = logging.FileHandler(filename='discord_bot.log', encoding='utf-8', mode='w')
 handler.setFormatter(logging.Formatter('%(asctime)s:%(levelname)s:%(name)s: %(message)s'))
 logger.addHandler(handler)
 
-# Console handler to view logs instantly on Railway Dashboard
 console_handler = logging.StreamHandler()
 console_handler.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(message)s'))
 logger.addHandler(console_handler)
@@ -78,14 +76,13 @@ class PasteLinkView(discord.ui.View):
     """Generates a stylish button directly linking to the proxy URL."""
     def __init__(self, url: str):
         super().__init__()
-        self.add_item(discord.ui.Button(label="🌐 Engelsiz Linki Aç (Proxy)", url=url, style=discord.ButtonStyle.link))
+        self.add_item(discord.ui.Button(label="🌐 Open Link (Proxy)", url=url, style=discord.ButtonStyle.link))
 
 # ========================================================================
 # 5. GLOBAL ERROR HANDLER
 # ========================================================================
 @bot.tree.error
 async def on_app_command_error(interaction: discord.Interaction, error: app_commands.AppCommandError):
-    """Prevents crashes during command executions and informs the user."""
     if isinstance(error, app_commands.CommandOnCooldown):
         await interaction.response.send_message(f"⏳ Please slow down! Wait {error.retry_after:.2f} seconds to use this command again.", ephemeral=True)
     elif isinstance(error, app_commands.MissingPermissions):
@@ -104,24 +101,23 @@ async def on_app_command_error(interaction: discord.Interaction, error: app_comm
 # 6. ALL ACTIVE SLASH COMMANDS
 # ========================================================================
 
-# REUSABLE CHOICES TYPES
 PING_CHOICES = [
     app_commands.Choice(name="Yes, mention @everyone", value="yes"),
     app_commands.Choice(name="No, do not mention", value="no")
 ]
 
 EXPIRATION_CHOICES = [
-    app_commands.Choice(name="10 Dakika (10M)", value="10M"),
-    app_commands.Choice(name="1 Saat (1H)", value="1H"),
-    app_commands.Choice(name="1 Gün (1D)", value="1D"),
-    app_commands.Choice(name="1 Hafta (1W)", value="1W"),
-    app_commands.Choice(name="1 Ay (1M)", value="1M"),
-    app_commands.Choice(name="1 Yıl (1Y)", value="1Y"),
-    app_commands.Choice(name="Asla (Never)", value="N")
+    app_commands.Choice(name="10 Minutes (10M)", value="10M"),
+    app_commands.Choice(name="1 Hour (1H)", value="1H"),
+    app_commands.Choice(name="1 Day (1D)", value="1D"),
+    app_commands.Choice(name="1 Week (1W)", value="1W"),
+    app_commands.Choice(name="1 Month (1M)", value="1M"),
+    app_commands.Choice(name="1 Year (1Y)", value="1Y"),
+    app_commands.Choice(name="Never (N)", value="N")
 ]
 
 # ---------------------------------------------------------
-# COMMAND 1: /send (Dynamic Channel Message Sender)
+# COMMAND 1: /send
 # ---------------------------------------------------------
 @bot.tree.command(name="send", description="Sends the desired text to the specified target channel.")
 @app_commands.describe(
@@ -142,11 +138,7 @@ async def send_cmd(interaction: discord.Interaction, channel: discord.TextChanne
     await interaction.response.defer(ephemeral=True)
     
     if not channel:
-        hata_embed = create_embed(
-            title="❌ Channel Not Found", 
-            description="The specified channel could not be found or the bot does not have permission to view it.", 
-            color=discord.Color.red()
-        )
+        hata_embed = create_embed("❌ Channel Not Found", "The specified channel could not be found.", discord.Color.red())
         await interaction.followup.send(embed=hata_embed)
         return
 
@@ -180,7 +172,7 @@ async def send_cmd(interaction: discord.Interaction, channel: discord.TextChanne
         await interaction.followup.send(f"❌ A technical error occurred while sending the message: {e}")
 
 # ---------------------------------------------------------
-# COMMAND 2: /txt (Personal TXT Document Creator - PRESERVES LINES)
+# COMMAND 2: /txt
 # ---------------------------------------------------------
 @bot.tree.command(name="txt", description="Converts text into a .txt document and sends it to you. (Line breaks preserved)")
 @app_commands.describe(
@@ -210,7 +202,6 @@ async def txt_cmd(interaction: discord.Interaction, file_name: str, content: str
 
     if message:
         embed.add_field(name="💬 Message", value=message, inline=False)
-        
     if picture:
         embed.set_image(url=picture.url)
 
@@ -225,9 +216,9 @@ async def txt_cmd(interaction: discord.Interaction, file_name: str, content: str
         dosya_byte.close()
 
 # ---------------------------------------------------------
-# COMMAND 3: /sendtxt (Dynamic Channel TXT Sender - PRESERVES LINES)
+# COMMAND 3: /sendtxt
 # ---------------------------------------------------------
-@bot.tree.command(name="sendtxt", description="Converts text into a .txt document and sends it to the target channel. (Lines preserved)")
+@bot.tree.command(name="sendtxt", description="Converts text into a .txt document and sends it to the target channel.")
 @app_commands.describe(
     channel="The target channel where the file will be sent",
     file_name="The name of the file to be created",
@@ -248,7 +239,7 @@ async def sendtxt_cmd(interaction: discord.Interaction, channel: discord.TextCha
     await interaction.response.defer(ephemeral=True)
     
     if not channel:
-        await interaction.followup.send("❌ Target channel not found! Please check the permissions.")
+        await interaction.followup.send("❌ Target channel not found!")
         return
 
     file_name = file_name.replace(" ", "_")
@@ -260,7 +251,6 @@ async def sendtxt_cmd(interaction: discord.Interaction, channel: discord.TextCha
         color=discord.Color.dark_theme(),
         timestamp=discord.utils.utcnow()
     )
-    
     if show_sender == "yes":
         kanal_embed.add_field(name="Sender", value=interaction.user.mention, inline=False)
     
@@ -268,7 +258,6 @@ async def sendtxt_cmd(interaction: discord.Interaction, channel: discord.TextCha
     
     if message:
         kanal_embed.add_field(name="💬 Message", value=message, inline=False)
-        
     if picture:
         kanal_embed.set_image(url=picture.url)
         
@@ -282,7 +271,6 @@ async def sendtxt_cmd(interaction: discord.Interaction, channel: discord.TextCha
     try:
         await channel.send(content=mention_str, embed=kanal_embed, file=discord_dosyasi)
         await interaction.followup.send(f"✅ The document **{file_name}** has been successfully uploaded to {channel.mention}.")
-        logger.info(f"[SENDTXT] {interaction.user} -> sent the file {file_name} to channel {channel.id}.")
     except discord.Forbidden:
         await interaction.followup.send("❌ The bot's permission to send file attachments or embed messages to this channel is disabled!")
     except Exception as e:
@@ -291,7 +279,7 @@ async def sendtxt_cmd(interaction: discord.Interaction, channel: discord.TextCha
         dosya_byte.close()
 
 # ---------------------------------------------------------
-# COMMAND 4: /modifytxt (Dynamic Channel TXT Sender - FLATTENS LINES TO SINGLE LINE)
+# COMMAND 4: /modifytxt
 # ---------------------------------------------------------
 @bot.tree.command(name="modifytxt", description="Flattens all lines side by side in a .txt file and sends it to the channel.")
 @app_commands.describe(
@@ -326,7 +314,6 @@ async def modifytxt_cmd(interaction: discord.Interaction, channel: discord.TextC
         color=discord.Color.orange(),
         timestamp=discord.utils.utcnow()
     )
-    
     if show_sender == "yes":
         kanal_embed.add_field(name="Sender", value=interaction.user.mention, inline=False)
     
@@ -334,7 +321,6 @@ async def modifytxt_cmd(interaction: discord.Interaction, channel: discord.TextC
     
     if message:
         kanal_embed.add_field(name="💬 Message", value=message, inline=False)
-        
     if picture:
         kanal_embed.set_image(url=picture.url)
         
@@ -351,7 +337,6 @@ async def modifytxt_cmd(interaction: discord.Interaction, channel: discord.TextC
     try:
         await channel.send(content=mention_str, embed=kanal_embed, file=discord_dosyasi)
         await interaction.followup.send(f"✅ The flattened document **{file_name}** has been uploaded to {channel.mention}.")
-        logger.info(f"[MODIFYTXT] {interaction.user} -> sent side-by-side file {file_name} to channel {channel.id}.")
     except discord.Forbidden:
         await interaction.followup.send("❌ Permission denied to send attachments or embeds in this channel!")
     except Exception as e:
@@ -360,7 +345,7 @@ async def modifytxt_cmd(interaction: discord.Interaction, channel: discord.TextC
         dosya_byte.close()
 
 # ---------------------------------------------------------
-# COMMAND 5: /sendmytxt (Upload and Forward local TXT File to Channel)
+# COMMAND 5: /sendmytxt
 # ---------------------------------------------------------
 @bot.tree.command(name="sendmytxt", description="Uploads an existing .txt file and forwards it directly to the target channel.")
 @app_commands.describe(
@@ -397,7 +382,6 @@ async def sendmytxt_cmd(interaction: discord.Interaction, channel: discord.TextC
         
         if message:
             kanal_embed.add_field(name="💬 Message", value=message, inline=False)
-            
         if picture:
             kanal_embed.set_image(url=picture.url)
             
@@ -407,16 +391,14 @@ async def sendmytxt_cmd(interaction: discord.Interaction, channel: discord.TextC
 
         await channel.send(content=mention_str, embed=kanal_embed, file=discord_dosyasi)
         await interaction.followup.send(f"✅ Your file **{file.filename}** has been successfully forwarded to {channel.mention}.")
-        logger.info(f"[SENDMYTXT] {interaction.user} forwarded file {file.filename} to channel {channel.id}.")
         dosya_byte.close()
-        
     except discord.Forbidden:
         await interaction.followup.send("❌ The bot lacks permissions to post embeds or files in the destination channel!")
     except Exception as e:
         await interaction.followup.send(f"❌ Failed to process and forward the file: {e}")
 
 # ---------------------------------------------------------
-# COMMAND 6: /sendmyfile (Upload and Forward ANY File to Channel)
+# COMMAND 6: /sendmyfile
 # ---------------------------------------------------------
 @bot.tree.command(name="sendmyfile", description="Uploads any file (e.g., .zip, .exe, .png) and forwards it to the target channel.")
 @app_commands.describe(
@@ -452,7 +434,6 @@ async def sendmyfile_cmd(interaction: discord.Interaction, channel: discord.Text
         
         if message:
             kanal_embed.add_field(name="💬 Message", value=message, inline=False)
-            
         if picture:
             kanal_embed.set_image(url=picture.url)
             
@@ -462,9 +443,7 @@ async def sendmyfile_cmd(interaction: discord.Interaction, channel: discord.Text
 
         await channel.send(content=mention_str, embed=kanal_embed, file=discord_dosyasi)
         await interaction.followup.send(f"✅ Your file **{file.filename}** has been successfully forwarded to {channel.mention}.")
-        logger.info(f"[SENDMYFILE] {interaction.user} forwarded file {file.filename} to channel {channel.id}.")
         dosya_byte.close()
-        
     except discord.Forbidden:
         await interaction.followup.send("❌ The bot lacks permissions to post embeds or files in the destination channel!")
     except discord.HTTPException as e:
@@ -476,17 +455,17 @@ async def sendmyfile_cmd(interaction: discord.Interaction, channel: discord.Text
         await interaction.followup.send(f"❌ Failed to process and forward the file: {e}")
 
 # ---------------------------------------------------------
-# COMMAND 7: /paste (Text Panel Formatter with Pastebin API Support)
+# COMMAND 7: /paste (English Translated)
 # ---------------------------------------------------------
-@bot.tree.command(name="paste", description="Uzun metinleri Pastebin'e yükler ve Türkiye engelsiz (Proxy) linkini hedef kanala gönderir.")
+@bot.tree.command(name="paste", description="Uploads long texts to Pastebin and sends the proxy link to the target channel.")
 @app_commands.describe(
-    channel="Paste linkinin ve embed mesajının gönderileceği hedef kanal",
-    content="Pastebin altyapısına yüklenecek olan kod veya metin (Zorunlu)",
-    title="Doküman için isteğe bağlı başlık (Varsayılan: Untitled Paste)",
-    expiration="İçeriğin ne kadar süre yayında kalacağını belirler (Varsayılan: Asla)",
-    message="Dosya gönderilirken eklenecek isteğe bağlı ek mesaj",
-    picture="Görsel olarak eklenecek isteğe bağlı ek resim (.png, .jpg, .gif)",
-    ping_everyone="Mesaj gönderilirken @everyone etiketlensin mi?"
+    channel="The target channel to send the Pastebin link and embed",
+    content="The text or code to be uploaded to Pastebin (Required)",
+    title="Optional title for the document (Default: Untitled Paste)",
+    expiration="Set how long the paste should be active (Default: Never)",
+    message="An optional text message to accompany the link",
+    picture="An optional image (.png, .jpg, .gif) to display",
+    ping_everyone="Do you want to mention @everyone?"
 )
 @app_commands.choices(
     expiration=EXPIRATION_CHOICES,
@@ -502,71 +481,223 @@ async def paste_cmd(
     picture: Optional[discord.Attachment] = None, 
     ping_everyone: str = "no"
 ):
-    # Kullanıcıya gizli (ephemeral) yükleme ekranı gösteriyoruz bot donmasın diye
     await interaction.response.defer(ephemeral=True)
     
     if not channel:
         await interaction.followup.send("❌ Target channel not found!")
         return
 
-    # Pastebin API parametre yükü hazırlanıyor
     payload = {
         "api_dev_key": PASTEBIN_API_KEY,
         "api_option": "paste",
         "api_paste_code": content,
         "api_paste_name": title if title else "Untitled Paste",
         "api_paste_expire_date": expiration,
-        "api_paste_private": "0"  # Public olarak yükle
+        "api_paste_private": "0"
     }
 
     try:
-        # requests.post senkron bir kütüphane olduğu için discord döngüsünü tıkamasın diye thread içinde çalıştırıyoruz
         response = await asyncio.to_thread(requests.post, PASTEBIN_URL, data=payload, timeout=10)
         response_text = response.text
 
         if response.status_code == 200 and "pastebin.com" in response_text:
             original_url = response_text.strip()
-            
-            # SİHİRLİ DOKUNUŞ: Türkiye engeline takılmaması için proxy linkine çeviriyoruz
             proxy_url = original_url.replace("pastebin.com", "pastebinp.com")
 
-            # Kanalda görünecek şık embed arayüzümüz
             kanal_embed = discord.Embed(
-                title="🎉 Metin Başarıyla Paste Edildi!",
+                title="🎉 Text Successfully Pasted!",
                 color=discord.Color.blue(),
                 timestamp=discord.utils.utcnow()
             )
-            kanal_embed.add_field(name="📋 Başlık", value=f"`{payload['api_paste_name']}`", inline=True)
-            kanal_embed.add_field(name="⏱ Süre Kısıtı", value=f"`{expiration}`", inline=True)
+            kanal_embed.add_field(name="📋 Title", value=f"`{payload['api_paste_name']}`", inline=True)
+            kanal_embed.add_field(name="⏱ Expiration", value=f"`{expiration}`", inline=True)
             
             if message:
-                kanal_embed.add_field(name="💬 Mesaj", value=message, inline=False)
-                
+                kanal_embed.add_field(name="💬 Message", value=message, inline=False)
             if picture:
                 kanal_embed.set_image(url=picture.url)
                 
-            kanal_embed.set_footer(text=f"Talep Eden: {interaction.user.display_name}")
+            kanal_embed.set_footer(text=f"Requested By: {interaction.user.display_name}")
 
-            # Şık UI Link Butonu ekleme adımı
             view = PasteLinkView(url=proxy_url)
             mention_str = "@everyone" if ping_everyone == "yes" else None
 
-            # Hedef kanala iletimi yapıyoruz
             await channel.send(content=mention_str, embed=kanal_embed, view=view)
-            
-            # Komutu tetikleyen yöneticiye gizli özet bildirimi geçiyoruz
-            await interaction.followup.send(f"✅ Paste başarıyla oluşturuldu ve {channel.mention} kanalına iletildi!\n🌐 **Sansürsüz Link:** {proxy_url}")
-            logger.info(f"[PASTE] {interaction.user} successfully pasted code inside {channel.id}.")
+            await interaction.followup.send(f"✅ Paste successfully created and forwarded to {channel.mention}!\n🌐 **Proxy Link:** {proxy_url}")
         else:
-            await interaction.followup.send(f"❌ *Pastebin API Hatası!*\n\nSunucu Yanıtı: `{response_text}`")
-            logger.error(f"[PASTE Error] API responded with: {response_text}")
-            
+            await interaction.followup.send(f"❌ *Pastebin API Error!*\n\nServer Response: `{response_text}`")
     except Exception as e:
-        await interaction.followup.send("❌ *Bağlantı Hatası!*\n\nPastebin sunucularına şu anda erişilemiyor.")
+        await interaction.followup.send("❌ *Connection Error!*\n\nPastebin servers are currently unreachable.")
         logger.error(f"[PASTE Critical] Connection error: {e}")
 
 # ---------------------------------------------------------
-# COMMAND 8: /botinfo (System Status Control)
+# COMMAND 8: /bulk (Multi-File Forwarder up to 10 Files)
+# ---------------------------------------------------------
+@bot.tree.command(name="bulk", description="Uploads up to 10 files in bulk and forwards them to the target channel.")
+@app_commands.describe(
+    channel="The target channel where the files will be sent",
+    file1="File 1 (Required)", file2="File 2", file3="File 3", file4="File 4", file5="File 5",
+    file6="File 6", file7="File 7", file8="File 8", file9="File 9", file10="File 10",
+    message="An optional text message to accompany the files",
+    picture="An optional image (.png, .jpg, .gif) to display",
+    ping_everyone="Do you want to mention @everyone?"
+)
+@app_commands.choices(ping_everyone=PING_CHOICES)
+async def bulk_cmd(
+    interaction: discord.Interaction, 
+    channel: discord.TextChannel, 
+    file1: discord.Attachment, 
+    file2: Optional[discord.Attachment] = None, 
+    file3: Optional[discord.Attachment] = None, 
+    file4: Optional[discord.Attachment] = None, 
+    file5: Optional[discord.Attachment] = None, 
+    file6: Optional[discord.Attachment] = None, 
+    file7: Optional[discord.Attachment] = None, 
+    file8: Optional[discord.Attachment] = None, 
+    file9: Optional[discord.Attachment] = None, 
+    file10: Optional[discord.Attachment] = None, 
+    message: Optional[str] = None, 
+    picture: Optional[discord.Attachment] = None, 
+    ping_everyone: str = "no"
+):
+    await interaction.response.defer(ephemeral=True)
+    
+    if not channel:
+        await interaction.followup.send("❌ Target channel not found!")
+        return
+
+    all_files = [f for f in [file1, file2, file3, file4, file5, file6, file7, file8, file9, file10] if f is not None]
+    
+    try:
+        discord_files = []
+        total_size = 0
+        
+        for f in all_files:
+            total_size += f.size
+            file_bytes = await f.read()
+            discord_files.append(discord.File(fp=io.BytesIO(file_bytes), filename=f.filename))
+            
+        file_size_mb = round(total_size / (1024 * 1024), 2)
+        
+        kanal_embed = discord.Embed(
+            title="📦 Bulk Files Have Arrived",
+            color=discord.Color.dark_teal(),
+            timestamp=discord.utils.utcnow()
+        )
+        kanal_embed.add_field(name="👤 Sender", value=interaction.user.mention, inline=True)
+        kanal_embed.add_field(name="📁 Total Files", value=f"`{len(all_files)}`", inline=True)
+        kanal_embed.add_field(name="💾 Total Size", value=f"`{file_size_mb} MB`", inline=True)
+        
+        if message:
+            kanal_embed.add_field(name="💬 Message", value=message, inline=False)
+        if picture:
+            kanal_embed.set_image(url=picture.url)
+            
+        kanal_embed.set_footer(text="Universal Bulk Forwarding Engine")
+        mention_str = "@everyone" if ping_everyone == "yes" else None
+
+        await channel.send(content=mention_str, embed=kanal_embed, files=discord_files)
+        await interaction.followup.send(f"✅ Your `{len(all_files)}` files have been successfully forwarded to {channel.mention}.")
+        logger.info(f"[BULK] {interaction.user} forwarded {len(all_files)} files to {channel.id}.")
+        
+    except discord.Forbidden:
+        await interaction.followup.send("❌ The bot lacks permissions to post embeds or files in the destination channel!")
+    except discord.HTTPException as e:
+        if e.code == 40005:
+            await interaction.followup.send("❌ The files are too large in total! Discord limits bot file uploads (typically 25MB max per message).")
+        else:
+            await interaction.followup.send(f"❌ Network or API Error occurred: {e}")
+    except Exception as e:
+        await interaction.followup.send(f"❌ Failed to process and forward the files: {e}")
+
+# ---------------------------------------------------------
+# COMMAND 9: /bulktxt (Multi-TXT Forwarder up to 10 Files)
+# ---------------------------------------------------------
+@bot.tree.command(name="bulktxt", description="Uploads up to 10 .txt files in bulk and forwards them to the target channel.")
+@app_commands.describe(
+    channel="The target channel where the .txt files will be sent",
+    file1="TXT File 1 (Required)", file2="TXT File 2", file3="TXT File 3", file4="TXT File 4", file5="TXT File 5",
+    file6="TXT File 6", file7="TXT File 7", file8="TXT File 8", file9="TXT File 9", file10="TXT File 10",
+    message="An optional text message to accompany the files",
+    picture="An optional image (.png, .jpg, .gif) to display",
+    ping_everyone="Do you want to mention @everyone?"
+)
+@app_commands.choices(ping_everyone=PING_CHOICES)
+async def bulktxt_cmd(
+    interaction: discord.Interaction, 
+    channel: discord.TextChannel, 
+    file1: discord.Attachment, 
+    file2: Optional[discord.Attachment] = None, 
+    file3: Optional[discord.Attachment] = None, 
+    file4: Optional[discord.Attachment] = None, 
+    file5: Optional[discord.Attachment] = None, 
+    file6: Optional[discord.Attachment] = None, 
+    file7: Optional[discord.Attachment] = None, 
+    file8: Optional[discord.Attachment] = None, 
+    file9: Optional[discord.Attachment] = None, 
+    file10: Optional[discord.Attachment] = None, 
+    message: Optional[str] = None, 
+    picture: Optional[discord.Attachment] = None, 
+    ping_everyone: str = "no"
+):
+    await interaction.response.defer(ephemeral=True)
+    
+    if not channel:
+        await interaction.followup.send("❌ Target channel not found!")
+        return
+
+    all_files = [f for f in [file1, file2, file3, file4, file5, file6, file7, file8, file9, file10] if f is not None]
+    
+    # Check if ALL uploaded files are .txt
+    for f in all_files:
+        if not f.filename.lower().endswith('.txt'):
+            await interaction.followup.send(f"❌ Invalid format! File `{f.filename}` is not a `.txt` extension.")
+            return
+            
+    try:
+        discord_files = []
+        total_size = 0
+        
+        for f in all_files:
+            total_size += f.size
+            file_bytes = await f.read()
+            discord_files.append(discord.File(fp=io.BytesIO(file_bytes), filename=f.filename))
+            
+        file_size_mb = round(total_size / (1024 * 1024), 2)
+        
+        kanal_embed = discord.Embed(
+            title="📝 Bulk TXT Documents Have Arrived",
+            color=discord.Color.dark_purple(),
+            timestamp=discord.utils.utcnow()
+        )
+        kanal_embed.add_field(name="👤 Sender", value=interaction.user.mention, inline=True)
+        kanal_embed.add_field(name="📁 Total TXT Files", value=f"`{len(all_files)}`", inline=True)
+        kanal_embed.add_field(name="💾 Total Size", value=f"`{file_size_mb} MB`", inline=True)
+        
+        if message:
+            kanal_embed.add_field(name="💬 Message", value=message, inline=False)
+        if picture:
+            kanal_embed.set_image(url=picture.url)
+            
+        kanal_embed.set_footer(text="Bulk TXT Forwarding Engine")
+        mention_str = "@everyone" if ping_everyone == "yes" else None
+
+        await channel.send(content=mention_str, embed=kanal_embed, files=discord_files)
+        await interaction.followup.send(f"✅ Your `{len(all_files)}` TXT files have been successfully forwarded to {channel.mention}.")
+        logger.info(f"[BULKTXT] {interaction.user} forwarded {len(all_files)} txt files to {channel.id}.")
+        
+    except discord.Forbidden:
+        await interaction.followup.send("❌ The bot lacks permissions to post embeds or files in the destination channel!")
+    except discord.HTTPException as e:
+        if e.code == 40005:
+            await interaction.followup.send("❌ The files are too large in total! Discord limits bot file uploads (typically 25MB max per message).")
+        else:
+            await interaction.followup.send(f"❌ Network or API Error occurred: {e}")
+    except Exception as e:
+        await interaction.followup.send(f"❌ Failed to process and forward the files: {e}")
+
+# ---------------------------------------------------------
+# COMMAND 10: /botinfo (System Status Control)
 # ---------------------------------------------------------
 @bot.tree.command(name="botinfo", description="Reports the bot's instant latency and server statistics.")
 async def botinfo_cmd(interaction: discord.Interaction):
